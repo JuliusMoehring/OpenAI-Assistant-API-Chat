@@ -3,17 +3,9 @@
 import { MoreHorizontal } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { deleteUploadedFile, prepareUploadFile } from "../modules/assistantModules";
-import {
-    Button,
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "./ui";
+import { Button } from "./ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 // Define the structure of the file data
 interface FileData {

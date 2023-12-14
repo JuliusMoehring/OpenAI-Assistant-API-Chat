@@ -3,7 +3,7 @@
 import { FileSchema, useChat } from "@/providers/ChatProvider";
 import Textarea from "react-textarea-autosize";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shadcn/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusIcon, SendHorizonalIcon } from "lucide-react";
 import { ChangeEvent, FC, useEffect } from "react";

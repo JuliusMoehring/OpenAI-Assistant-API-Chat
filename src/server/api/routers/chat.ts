@@ -148,18 +148,6 @@ export const chatRouter = createTRPCRouter({
             return content;
         }),
 
-    getMessages: protectedProcedure.input(z.object({ threadId: z.string() })).query(async ({ input }) => {
-        const { threadId } = input;
-
-        const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
-
-        const messages = await openai.beta.threads.messages.list(threadId);
-
-        return messages.data;
-    }),
-
     getLastestAssistantMessage: protectedProcedure
         .input(z.object({ threadId: z.string() }))
         .query(async ({ input }) => {

@@ -1,11 +1,9 @@
-// MessageList.js
-import { FileDetail } from "@/hooks/useChatState";
-import { useChat } from "@/providers/ChatProvider";
+import { FileDetailsType, useChat } from "@/providers/ChatProvider";
 import { Bot, User } from "lucide-react";
 import { FC } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { DocumentIcon, ImageIcon } from "../app/icons";
+import { FileIcon } from "./file-icon";
 import { Skeleton } from "./ui/skeleton";
 
 type AssistantMessageProps = {
@@ -54,7 +52,7 @@ const AssistantMessageLoadingSkeleton: FC = () => {
 
 type UserMessageProps = {
     content: string;
-    fileDetails: FileDetail[];
+    fileDetails: FileDetailsType[];
 };
 
 const UserMessage: FC<UserMessageProps> = ({ content, fileDetails }) => {
@@ -78,11 +76,8 @@ const UserMessage: FC<UserMessageProps> = ({ content, fileDetails }) => {
                     <div className="mt-2 grid grid-cols-4 gap-2">
                         {fileDetails.map((file) => (
                             <div key={file.name} className="flex items-center space-x-1">
-                                {file.type.startsWith("image") ? (
-                                    <ImageIcon className="h-3 w-3" />
-                                ) : (
-                                    <DocumentIcon className="h-3 w-3" />
-                                )}
+                                <FileIcon type={file.type} />
+
                                 <span className="block w-28 truncate text-xs text-gray-500">{file.name}</span>
                             </div>
                         ))}

@@ -1,159 +1,204 @@
-import React, { useEffect, useState } from "react";
-import { LoadingCircle } from "../app/icons";
-import UploadFiles_Configure from "./UploadFiles_Component";
-import { statusToProgress as statusToProgressRecord } from "./statusToProgress";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ChangeEvent, FC } from "react";
+import { z } from "zod";
 
-const statusToProgress: Record<string, number> = statusToProgressRecord;
+import { cn } from "@/lib/shadcn/utils";
+import { FileSchema } from "@/providers/ChatProvider";
+import { PlusIcon } from "lucide-react";
+import { Control, useFieldArray, useForm } from "react-hook-form";
+import { FileInput } from "./file-input";
+import { AlertDialog, AlertDialogAction, AlertDialogContent } from "./ui/alert-dialog";
+import { buttonVariants } from "./ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Textarea } from "./ui/textarea";
 
-type WelcomeFormProps = {
-    assistantName: string;
-    setAssistantName: (name: string) => void;
-    assistantDescription: string;
-    setAssistantDescription: (description: string) => void;
-    assistantModel: string;
-    setAssistantModel: (model: string) => void;
-    startChatAssistant: () => void;
-    isButtonDisabled: boolean;
-    isStartLoading: boolean;
-    statusMessage: string;
-    fileIds: string[];
-    setFileIds: React.Dispatch<React.SetStateAction<string[]>>;
+const MODELS = {
+    GPT_3_5: "gpt-3.5-turbo-1106",
+    GPT_4: "gpt-4-1106-preview",
+} as const;
+
+type ModelType = (typeof MODELS)[keyof typeof MODELS];
+
+const ModelToNameMap: Record<ModelType, string> = {
+    [MODELS.GPT_3_5]: "GPT-3.5 Turbo",
+    [MODELS.GPT_4]: "GPT-4",
 };
 
-export const WelcomeForm: React.FC<WelcomeFormProps> = ({
-    assistantName,
-    setAssistantName,
-    assistantDescription,
-    setAssistantDescription,
-    assistantModel,
-    setAssistantModel,
-    startChatAssistant,
-    isButtonDisabled,
-    isStartLoading,
-    statusMessage,
-    fileIds,
-    setFileIds,
-}) => {
-    const [lastProgress, setLastProgress] = useState(0);
-    const baseStatusMessage = statusMessage.split(" (")[0];
-    let progress = statusToProgress[baseStatusMessage] || 0;
+const CreateAssistantFormSchema = z.object({
+    name: z.string().min(1, "Assistant name is required"),
+    description: z.string().optional(),
+    model: z.enum([MODELS.GPT_3_5, MODELS.GPT_4]),
+    files: z.array(FileSchema).default([]),
+});
 
-    if (progress === 0 && lastProgress !== 0) {
-        progress = lastProgress;
-    } else if (progress !== lastProgress) {
-        setLastProgress(progress);
-    }
+type CreateAssistantFormType = z.infer<typeof CreateAssistantFormSchema>;
 
-    const handleFileIdUpdate = (fileId: string) => {
-        console.log("WelcomeForm: New file ID added:", fileId);
-        setFileIds((prevFileIds) => [...prevFileIds, fileId]);
+export const WelcomeForm: FC = () => {
+    const form = useForm({
+        resolver: zodResolver(CreateAssistantFormSchema),
+        defaultValues: {
+            name: "",
+            description: "",
+            model: MODELS.GPT_3_5,
+            files: [],
+        },
+    });
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control as unknown as Control<CreateAssistantFormType, any>,
+        name: "files",
+    });
+
+    const handleSelectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+
+        if (!files) {
+            return;
+        }
+
+        const fileArray = Array.from(files);
+
+        for (const file of fileArray) {
+            const name = file.name;
+            const type = file.type;
+            const content = await file.text();
+            const size = file.size;
+
+            append({
+                name,
+                type,
+                content,
+                size,
+            });
+        }
     };
 
-    const handleActiveFileIdsUpdate = (activeFileIds: string[]) => {
-        setFileIds(activeFileIds);
+    const onSubmit = async (values: CreateAssistantFormType) => {
+        console.log(values);
     };
-
-    if (progress === 0 && lastProgress !== 0) {
-        progress = lastProgress;
-    } else if (progress !== lastProgress) {
-        setLastProgress(progress);
-    }
-
-    useEffect(() => {
-        console.log("Aktive Datei-IDs:", fileIds);
-    }, [fileIds]);
 
     return (
-        <div className="mx-5 mt-20 max-w-screen-md rounded-md border-2 border-gray-500 bg-gray-200 sm:mx-0 sm:w-full">
-            <div className="flex flex-col space-y-4 p-7 sm:p-10">
+        <AlertDialog open>
+            <AlertDialogContent>
                 <h1 className="text-lg font-semibold text-black">Welcome to Agent42!</h1>
-                <form className="flex flex-col space-y-3">
-                    <input
-                        type="text"
-                        placeholder="Assistant Name"
-                        value={assistantName}
-                        onChange={(e) => setAssistantName(e.target.value)}
-                        required
-                        className="rounded-md border border-gray-200 p-2"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Assistant Description"
-                        value={assistantDescription}
-                        onChange={(e) => setAssistantDescription(e.target.value)}
-                        required
-                        className="rounded-md border border-gray-200 p-2"
-                    />
-                    <div>
-                        <button
-                            type="button"
-                            onClick={() => setAssistantModel("gpt-4-1106-preview")}
-                            className={`rounded-md border border-gray-400 p-1 ${
-                                assistantModel === "gpt-4-1106-preview" ? "bg-blue-500 text-white" : ""
-                            }`}
-                            disabled={process.env.NEXT_PUBLIC_DEMO_MODE === "true"}
-                        >
-                            GPT-4
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setAssistantModel("gpt-3.5-turbo-1106")}
-                            className={`rounded-md border border-gray-400 p-1 ${
-                                assistantModel === "gpt-3.5-turbo-1106" ? "bg-blue-500 text-white" : ""
-                            }`}
-                        >
-                            GPT-3.5
-                        </button>
-                    </div>
-                </form>
 
-                <div className="upload-files-container">
-                    <UploadFiles_Configure
-                        onFileIdUpdate={handleFileIdUpdate}
-                        setActiveFileIds={handleActiveFileIdsUpdate}
-                    />
-                </div>
-                {/* Start button in its own container */}
-                <div className="flex justify-center p-4">
-                    <button
-                        type="button"
-                        onClick={startChatAssistant}
-                        disabled={
-                            isButtonDisabled ||
-                            !assistantName ||
-                            !assistantDescription ||
-                            fileIds.length === 0 ||
-                            fileIds.some((fileId) => typeof fileId === "undefined")
-                        }
-                        className="relative flex w-full items-center justify-center overflow-hidden rounded-md bg-green-500 p-2 text-white"
-                        style={{
-                            position: "relative",
-                            opacity: isButtonDisabled ? 0.5 : 1,
-                        }}
-                    >
-                        {isStartLoading && (
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    left: 0,
-                                    top: 0,
-                                    height: "100%",
-                                    width: `${progress}%`,
-                                    background: "rgba(0, 0, 0, 0.2)",
-                                }}
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                        <div className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name</FormLabel>
+
+                                        <FormControl>
+                                            <Input placeholder="Assistant name" {...field} />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
-                        )}
-                        {isStartLoading ? (
-                            <div className="flex flex-col items-center space-y-2">
-                                <LoadingCircle />
-                                <p className="text-sm text-gray-700">{statusMessage}</p>
-                            </div>
-                        ) : (
-                            "Start"
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
+
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Assistant description"
+                                                className="resize-none"
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="model"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Model</FormLabel>
+
+                                        <Select onValueChange={field.onChange} defaultValue={field.value.toString()}>
+                                            <FormControl>
+                                                <SelectTrigger className="w-60">
+                                                    <SelectValue placeholder="Select a model" />
+                                                </SelectTrigger>
+                                            </FormControl>
+
+                                            <SelectContent>
+                                                {Object.entries(MODELS).map(([key, value]) => (
+                                                    <SelectItem key={key} value={value}>
+                                                        {ModelToNameMap[value]}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="files"
+                                render={() => (
+                                    <FormItem>
+                                        <FormLabel className="block w-full">Knowledge</FormLabel>
+
+                                        <div>
+                                            <input
+                                                type="file"
+                                                id="file-upload"
+                                                style={{ display: "none" }}
+                                                multiple
+                                                accept=".c,.cpp,.csv,.docx,.html,.java,.json,.md,.pdf,.pptx,.txt,.tex,image/jpeg,image/png"
+                                                onChange={handleSelectFiles}
+                                            />
+                                            <label
+                                                htmlFor="file-upload"
+                                                className={cn(buttonVariants({ variant: "outline" }), "shrink-0")}
+                                            >
+                                                <PlusIcon className="mr-2 h-4 w-4" />
+                                                Upload Files
+                                            </label>
+
+                                            <div className="mt-4 space-y-2">
+                                                {fields.map(({ id, name, type }, index) => (
+                                                    <FileInput
+                                                        key={id}
+                                                        name={name}
+                                                        type={type}
+                                                        handleRemove={() => remove(index)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <AlertDialogAction type="submit" className="mt-8 w-full">
+                            Start
+                        </AlertDialogAction>
+                    </form>
+                </Form>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 };

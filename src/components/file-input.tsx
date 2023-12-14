@@ -1,31 +1,29 @@
-import { DocumentIcon } from "@/app/icons";
-import { ImageIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { FC } from "react";
+import { FileIcon } from "./file-icon";
 
 type FileInputProps = {
-  name: string;
-  type: string;
-  handleRemove: () => void;
+    name: string;
+    type: string;
+    handleRemove: () => void;
 };
 
 export const FileInput: FC<FileInputProps> = ({ name, type, handleRemove }) => {
-  return (
-    <div className="flex items-center space-x-1">
-      {type.startsWith("image") ? (
-        <ImageIcon className="h-3 w-3" />
-      ) : (
-        <DocumentIcon className="h-3 w-3" />
-      )}
+    return (
+        <div className="flex w-full items-center justify-between space-x-1">
+            <div className="flex w-full items-center gap-2">
+                <FileIcon type={type} className="h-5 w-5" />
 
-      <span className="text-xs text-gray-500">{name}</span>
+                <p className="line-clamp-1 text-xs text-gray-500">{name}</p>
+            </div>
 
-      <button
-        type="button"
-        onClick={handleRemove}
-        className="rounded p-1 transition-colors duration-200 hover:bg-gray-200"
-      >
-        <XIcon className="h-4 w-4 text-gray-500" />
-      </button>
-    </div>
-  );
+            <button
+                type="button"
+                onClick={handleRemove}
+                className="shrink-0 rounded p-1 transition-colors duration-200 hover:bg-gray-200"
+            >
+                <XIcon className="h-4 w-4 text-gray-500" />
+            </button>
+        </div>
+    );
 };
