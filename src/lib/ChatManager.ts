@@ -1,9 +1,21 @@
-import { ChatMessage, FileType } from "@/providers/ChatProvider";
+import { ChatMessage } from "@/providers/ChatProvider";
 import { AppRouter } from "@/server/api/root";
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import { MessageContentText, ThreadMessage } from "openai/resources/beta/threads/messages/messages";
 import { Dispatch, SetStateAction } from "react";
 import superjson from "superjson";
+import { z } from "zod";
+
+const HandleUploadSchema = z.union([
+    z.object({
+        success: z.literal(true),
+        fileId: z.string(),
+    }),
+    z.object({
+        success: z.literal(false),
+        message: z.string(),
+    }),
+]);
 
 const trpcClient = createTRPCProxyClient<AppRouter>({
     transformer: superjson,
@@ -70,6 +82,79 @@ export class ChatManager {
         this.updateAssistantLoadingState(isLoading);
     };
 
+    private uploadFile = async (file: File) => {
+        const formData = new FormData();
+
+        formData.append("file", file);
+
+        const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error("Error uploading file");
+        }
+
+        const data = await response.json();
+
+        const parsedData = HandleUploadSchema.safeParse(data);
+
+        if (!parsedData.success) {
+            throw new Error("Error uploading file");
+        }
+
+        if (!parsedData.data.success) {
+            throw new Error(parsedData.data.message);
+        }
+
+        return parsedData.data.fileId;
+    };
+
+    private uploadFiles = async (files: File[]) => await Promise.all(files.map(async (file) => this.uploadFile(file)));
+
+    private runAssistant = async () => {
+        if (!this.assistantId || !this.threadId) {
+            return;
+        }
+
+        const runId = await trpcClient.assistant.runAssistant.mutate({
+            assistantId: this.assistantId,
+            threadId: this.threadId,
+        });
+
+        this.runId = runId;
+
+        let status = null;
+
+        do {
+            const runStatus = await trpcClient.run.getRunStatus.query({
+                threadId: this.threadId,
+                runId: this.runId,
+            });
+
+            status = runStatus.status;
+
+            await new Promise((resolve) => setTimeout(resolve, 1_000));
+        } while (status !== "completed");
+
+        const initialAssistantMessage = await trpcClient.chat.getLastestAssistantMessage.query({
+            threadId: this.threadId,
+        });
+
+        if (!initialAssistantMessage) {
+            return;
+        }
+
+        const messageContentText = this.theadMessageToMessageContentText(initialAssistantMessage);
+
+        if (!messageContentText) {
+            return;
+        }
+
+        return messageContentText;
+    };
+
     init = async (initialMessage: string) => {
         if (!this.assistantId) {
             this.assistantId = await this.createAssistant();
@@ -79,35 +164,7 @@ export class ChatManager {
 
         this.threadId = threadId;
 
-        const runId = await trpcClient.assistant.runAssistant.mutate({
-            assistantId: this.assistantId,
-            threadId: threadId,
-        });
-
-        this.runId = runId;
-
-        let status = null;
-
-        do {
-            const runStatus = await trpcClient.run.getRunStatus.query({
-                threadId: threadId,
-                runId: runId,
-            });
-
-            status = runStatus.status;
-
-            await new Promise((resolve) => setTimeout(resolve, 1_000));
-        } while (status !== "completed");
-
-        const initialAssistantMessage = await trpcClient.chat.getLastestAssistantMessage.query({
-            threadId: threadId,
-        });
-
-        if (!initialAssistantMessage) {
-            return;
-        }
-
-        const messageContentText = this.theadMessageToMessageContentText(initialAssistantMessage);
+        const messageContentText = await this.runAssistant();
 
         if (!messageContentText) {
             return;
@@ -123,7 +180,7 @@ export class ChatManager {
         this.isReady = true;
     };
 
-    sendMessage = async (message: string, files: FileType[]) => {
+    sendMessage = async (message: string, files: File[]) => {
         if (!this.isReady || !this.assistantId || !this.threadId || !this.runId || this.isSending) {
             return;
         }
@@ -131,69 +188,50 @@ export class ChatManager {
         this.isSending = true;
         this.updateLoadingState(true);
 
-        const fileDetails = files.map((file) => ({
-            name: file.name,
-            type: file.type,
-            size: file.size,
-        }));
+        try {
+            const fileDetails = files.map((file) => ({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+            }));
 
-        this.updateMessages((prevState) => [
-            ...prevState,
-            {
-                role: "user",
-                content: message,
-                fileDetails,
-            },
-        ]);
+            this.updateMessages((prevState) => [
+                ...prevState,
+                {
+                    role: "user",
+                    content: message,
+                    fileDetails,
+                },
+            ]);
 
-        await trpcClient.chat.sendMessage.mutate({
-            threadId: this.threadId,
-            message: message,
-            files: files,
-        });
+            const fileIds = await this.uploadFiles(files);
 
-        this.runId = await trpcClient.assistant.runAssistant.mutate({
-            assistantId: this.assistantId,
-            threadId: this.threadId,
-        });
-
-        let status = null;
-
-        do {
-            const runStatus = await trpcClient.run.getRunStatus.query({
+            await trpcClient.chat.sendMessage.mutate({
                 threadId: this.threadId,
-                runId: this.runId,
+                message: message,
+                fileIds,
             });
 
-            status = runStatus.status;
+            const messageContentText = await this.runAssistant();
 
-            await new Promise((resolve) => setTimeout(resolve, 1_000));
-        } while (status !== "completed");
+            if (!messageContentText) {
+                return;
+            }
 
-        const latestAssistantMessage = await trpcClient.chat.getLastestAssistantMessage.query({
-            threadId: this.threadId,
-        });
+            this.updateMessages((prevState) => [
+                ...prevState,
+                {
+                    role: "assistant",
+                    content: messageContentText.text.value,
+                },
+            ]);
+        } catch (error) {
+            throw error;
+        } finally {
+            this.updateLoadingState(false);
 
-        if (!latestAssistantMessage) {
-            return;
+            this.isSending = false;
         }
-
-        const messageContentText = this.theadMessageToMessageContentText(latestAssistantMessage);
-
-        if (!messageContentText) {
-            return;
-        }
-
-        this.updateLoadingState(false);
-        this.updateMessages((prevState) => [
-            ...prevState,
-            {
-                role: "assistant",
-                content: messageContentText.text.value,
-            },
-        ]);
-
-        this.isSending = false;
     };
 
     getReadyState = () => {

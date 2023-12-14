@@ -1,8 +1,8 @@
 "use client";
 
+import { Chat } from "@/components/chat";
 import { InvalidAssistantDialog } from "@/components/invalid-assistant-dialog";
 import { UnauthorizedDialog } from "@/components/unauthorized-dialog";
-import { WelcomeForm } from "@/components/welcome-form";
 import { useMapPathToAssistantId } from "@/hooks/useMapPathToAssistantId";
 import { useUserHasAccess } from "@/hooks/useUserHasAccess";
 import { ChatProvider } from "@/providers/ChatProvider";
@@ -31,7 +31,7 @@ const Root: NextPage = () => {
 
     return (
         <ChatProvider assistantId={assistantId}>
-            <WelcomeForm />
+            <Chat />
         </ChatProvider>
     );
 };

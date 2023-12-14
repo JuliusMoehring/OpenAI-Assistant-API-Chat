@@ -1,3 +1,5 @@
+import { ComponentPropsWithoutRef, FC } from "react";
+
 export const VercelIcon = () => {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" version="1" viewBox="0 0 340 332">
@@ -25,7 +27,7 @@ export const LoadingCircle = () => {
     return (
         <svg
             aria-hidden="true"
-            className="h-4 w-4 animate-spin fill-stone-600 text-stone-200"
+            className="h-4 w-4 animate-spin fill-muted text-secondary"
             viewBox="0 0 100 101"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -38,6 +40,34 @@ export const LoadingCircle = () => {
                 d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
                 fill="currentFill"
             />
+        </svg>
+    );
+};
+
+type Props = ComponentPropsWithoutRef<"svg">;
+
+export const ChatGPT: FC<Props> = ({ ...props }) => {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            xmlnsXlink="http://www.w3.org/1999/xlink"
+            viewBox="0 0 2406 2406"
+            {...props}
+        >
+            <path
+                d="M1 578.4C1 259.5 259.5 1 578.4 1h1249.1c319 0 577.5 258.5 577.5 577.4V2406H578.4C259.5 2406 1 2147.5 1 1828.6V578.4z"
+                fill="#74aa9c"
+            />
+            <path
+                id="a"
+                d="M1107.3 299.1c-197.999 0-373.9 127.3-435.2 315.3L650 743.5v427.9c0 21.4 11 40.4 29.4 51.4l344.5 198.515V833.3h.1v-27.9L1372.7 604c33.715-19.52 70.44-32.857 108.47-39.828L1447.6 450.3C1361 353.5 1237.1 298.5 1107.3 299.1zm0 117.5-.6.6c79.699 0 156.3 27.5 217.6 78.4-2.5 1.2-7.4 4.3-11 6.1L952.8 709.3c-18.4 10.4-29.4 30-29.4 51.4V1248l-155.1-89.4V755.8c-.1-187.099 151.601-338.9 339-339.2z"
+                fill="#fff"
+            />
+            <use xlinkHref="#a" transform="rotate(60 1203 1203)" />
+            <use xlinkHref="#a" transform="rotate(120 1203 1203)" />
+            <use xlinkHref="#a" transform="rotate(180 1203 1203)" />
+            <use xlinkHref="#a" transform="rotate(240 1203 1203)" />
+            <use xlinkHref="#a" transform="rotate(300 1203 1203)" />
         </svg>
     );
 };

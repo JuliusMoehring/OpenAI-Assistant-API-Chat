@@ -1,12 +1,15 @@
 import { env } from "@/env.mjs";
-import { FileSchema } from "@/providers/ChatProvider";
 import { TRPCError } from "@trpc/server";
-import { createReadStream } from "fs";
-import { unlink, writeFile } from "fs/promises";
-import OpenAI, { OpenAIError } from "openai";
-import { v4 as uuid } from "uuid";
+import OpenAI from "openai";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+
+const FileSchema = z.object({
+    name: z.string(),
+    type: z.string(),
+    content: z.string(),
+    size: z.number(),
+});
 
 export const chatRouter = createTRPCRouter({
     initializeChat: protectedProcedure
@@ -85,19 +88,23 @@ export const chatRouter = createTRPCRouter({
             z.object({
                 threadId: z.string(),
                 message: z.string(),
-                files: z.array(FileSchema),
+                fileIds: z.array(z.string()).default([]),
             }),
         )
         .mutation(async ({ input }) => {
-            const { threadId, message, files } = input;
+            const { threadId, message, fileIds } = input;
 
             const openai = new OpenAI({
                 apiKey: env.OPENAI_API_KEY,
             });
 
+            /**
+
             const fileIds = await Promise.all(
                 files.map(async (file) => {
-                    const path = `/tmp/${uuid()}-${file.name}`;
+                    await mkdir(`${__dirname}/tmp`, { recursive: true });
+
+                    const path = `${__dirname}/tmp/${uuid()}-${file.name}`;
 
                     try {
                         await writeFile(path, file.content);
@@ -116,15 +123,21 @@ export const chatRouter = createTRPCRouter({
                             });
                         }
 
+                        console.error(error);
+
                         throw new TRPCError({
                             code: "INTERNAL_SERVER_ERROR",
                             message: "Error uploading file",
                         });
                     } finally {
-                        await unlink(path);
+                        if (env.NODE_ENV !== "development") {
+                            await unlink(path);
+                        }
                     }
                 }),
             );
+
+            */
 
             const response = await openai.beta.threads.messages.create(threadId, {
                 role: "user",
