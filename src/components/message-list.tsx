@@ -1,83 +1,115 @@
 // MessageList.js
 import { FileDetail } from "@/hooks/useChatState";
-import { ChatMessage, useChat } from "@/providers/ChatProvider";
-import clsx from "clsx";
+import { useChat } from "@/providers/ChatProvider";
 import { Bot, User } from "lucide-react";
 import { FC } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { DocumentIcon, ImageIcon } from "../app/icons";
+import { Skeleton } from "./ui/skeleton";
 
-type MessageProps = {
-    message: ChatMessage;
-    progress: number;
-    isFirstMessage: boolean;
+type AssistantMessageProps = {
+    content: string;
+};
+
+const AssistantMessage: FC<AssistantMessageProps> = ({ content }) => {
+    return (
+        <div className={"flex w-full items-center justify-center border-b border-gray-200 bg-gray-100 py-8"}>
+            <div className="flex w-full max-w-screen-md items-start space-x-4 px-5 sm:px-0">
+                <div className="bg-green-500 p-1.5 text-white">
+                    <Bot width={20} />
+                </div>
+
+                <div className="flex w-full flex-col">
+                    <ReactMarkdown
+                        className="prose mt-1 break-words prose-p:leading-relaxed"
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+                        }}
+                    >
+                        {content}
+                    </ReactMarkdown>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AssistantMessageLoadingSkeleton: FC = () => {
+    return (
+        <div className={"flex w-full items-center justify-center border-b border-gray-200 bg-gray-100 py-8"}>
+            <div className="flex w-full max-w-screen-md items-start space-x-4 px-5 sm:px-0">
+                <div className="bg-green-500 p-1.5 text-white">
+                    <Bot width={20} />
+                </div>
+
+                <div className="flex w-full flex-col">
+                    <Skeleton className="h-7 w-1/2" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+type UserMessageProps = {
+    content: string;
     fileDetails: FileDetail[];
 };
 
-export const Message: FC<MessageProps> = ({ message, progress, isFirstMessage, fileDetails }) => {
+const UserMessage: FC<UserMessageProps> = ({ content, fileDetails }) => {
     return (
-        <div
-            className={clsx(
-                "flex w-full items-center justify-center border-b border-gray-200 py-8",
-                message.role === "user" ? "bg-white" : "bg-gray-100",
-            )}
-        >
+        <div className="flex w-full items-center justify-center border-b border-gray-200 bg-white py-8">
             <div className="flex w-full max-w-screen-md items-start space-x-4 px-5 sm:px-0">
-                <div className={clsx("p-1.5 text-white", message.role === "assistant" ? "bg-green-500" : "bg-black")}>
-                    {message.role === "user" ? <User width={20} /> : <Bot width={20} />}
+                <div className="bg-black p-1.5 text-white">
+                    <User width={20} />
                 </div>
-                {message.role === "assistant" ? (
-                    <>
-                        <div className="h-4 w-full overflow-hidden rounded-full bg-gray-200">
-                            <div
-                                className={clsx("h-full bg-green-500", isFirstMessage ? "animate-spin-slow" : "")}
-                                style={{ width: `${progress}%` }}
-                            ></div>
-                        </div>
-                        <div className="flex w-full items-center justify-center text-xs text-green-500">
-                            {message.content}
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex w-full flex-col">
-                        <ReactMarkdown
-                            className="prose mt-1 break-words prose-p:leading-relaxed"
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                                a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
-                            }}
-                        >
-                            {message.content}
-                        </ReactMarkdown>
-                        <div className="mt-2 grid grid-cols-4 gap-2">
-                            {fileDetails &&
-                                fileDetails.map((file) => (
-                                    <div key={file.name} className="flex items-center space-x-1">
-                                        {file.type.startsWith("image") ? (
-                                            <ImageIcon className="h-3 w-3" />
-                                        ) : (
-                                            <DocumentIcon className="h-3 w-3" />
-                                        )}
-                                        <span className="block w-28 truncate text-xs text-gray-500">{file.name}</span>
-                                    </div>
-                                ))}
-                        </div>
+                <div className="flex w-full flex-col">
+                    <ReactMarkdown
+                        className="prose mt-1 break-words prose-p:leading-relaxed"
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+                        }}
+                    >
+                        {content}
+                    </ReactMarkdown>
+
+                    <div className="mt-2 grid grid-cols-4 gap-2">
+                        {fileDetails.map((file) => (
+                            <div key={file.name} className="flex items-center space-x-1">
+                                {file.type.startsWith("image") ? (
+                                    <ImageIcon className="h-3 w-3" />
+                                ) : (
+                                    <DocumentIcon className="h-3 w-3" />
+                                )}
+                                <span className="block w-28 truncate text-xs text-gray-500">{file.name}</span>
+                            </div>
+                        ))}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
 };
 
 export const MessageList: FC = () => {
-    const { messages } = useChat();
-
+    const { messages, isFetchingAssistantMessage } = useChat();
     return (
-        <>
-            {messages.map((message, i) => (
-                <Message key={i} message={message} progress={0} isFirstMessage={false} fileDetails={[]} />
-            ))}
-        </>
+        <div className="flex flex-col gap-1">
+            {messages.map((message) => {
+                if (message.role === "assistant") {
+                    return <AssistantMessage key={message.content} content={message.content} />;
+                }
+
+                if (message.role === "user") {
+                    return <UserMessage key={message.content} content={message.content} fileDetails={[]} />;
+                }
+
+                return null;
+            })}
+
+            {isFetchingAssistantMessage && <AssistantMessageLoadingSkeleton />}
+        </div>
     );
 };

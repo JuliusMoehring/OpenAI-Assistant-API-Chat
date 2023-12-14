@@ -4,9 +4,12 @@ import { Chat } from "@/components/chat";
 import { useMapPathToAssistantId } from "@/hooks/useMapPathToAssistantId";
 import { ChatProvider } from "@/providers/ChatProvider";
 import { NextPage } from "next";
+import { useParams } from "next/navigation";
 
 const Root: NextPage = () => {
-    const assistantId = useMapPathToAssistantId("default");
+    const { assistant } = useParams<{ assistant: string }>();
+
+    const assistantId = useMapPathToAssistantId(assistant);
 
     if (!assistantId) {
         return null;

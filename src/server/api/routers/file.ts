@@ -138,4 +138,36 @@ export const fileRouter = createTRPCRouter({
         });
       }
     }),
+
+  downloadFile: protectedProcedure
+    .input(
+      z.object({
+        fileId: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { fileId } = input;
+
+      const openai = new OpenAI({
+        apiKey: env.OPENAI_API_KEY,
+      });
+
+      try {
+        const file = await openai.files.content(fileId);
+
+        return file;
+      } catch (error) {
+        if (error instanceof OpenAIError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message,
+          });
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Error downloading file",
+        });
+      }
+    }),
 });

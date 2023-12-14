@@ -1,18 +1,15 @@
-import { trpc } from "@/lib/trpc/client";
-import {
-  FC,
-  PropsWithChildren,
-  createContext,
-  useContext,
-  useState,
-} from "react";
+"use client";
+
+import { env } from "@/env.mjs";
+import { ChatManager } from "@/lib/ChatManager";
+import { FC, PropsWithChildren, createContext, useContext, useEffect, useState } from "react";
 import { z } from "zod";
 
 export const FileSchema = z.object({
-  name: z.string(),
-  type: z.string(),
-  content: z.string(),
-  size: z.number(),
+    name: z.string(),
+    type: z.string(),
+    content: z.string(),
+    size: z.number(),
 });
 
 export type FileType = z.infer<typeof FileSchema>;
@@ -20,171 +17,89 @@ export type FileType = z.infer<typeof FileSchema>;
 export type FileDetailsType = Omit<FileType, "content">;
 
 export type ChatMessage =
-  | {
-      role: "user";
-      content: string;
-      fileDetails: FileDetailsType[];
-    }
-  | {
-      role: "assistant";
-      content: string;
-    };
+    | {
+          role: "user";
+          content: string;
+          fileDetails: FileDetailsType[];
+      }
+    | {
+          role: "assistant";
+          content: string;
+      };
 
 type ChatContextType = {
-  messages: ChatMessage[];
-  sendMessage: (message: string, files: FileType[]) => Promise<void>;
+    messages: ChatMessage[];
+    isReady: boolean;
+    chatManager: ChatManager | null;
+    isFetchingAssistantMessage: boolean;
 };
 
 const ChatContext = createContext<ChatContextType>({
-  messages: [],
-  sendMessage: () => Promise.resolve(),
+    messages: [],
+    isReady: false,
+    chatManager: null,
+    isFetchingAssistantMessage: false,
 });
 
-export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
-  const [progress, setProgress] = useState(0);
-  const [assistantId, setAssistantId] = useState<string | null>(null);
-  const [threadId, setThreadId] = useState<string | null>(null);
-  const [runId, setRunId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [assistantResponseReceived, setAssistantResponseReceived] =
-    useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+type ChatProviderProps = {
+    assistantId: string;
+};
 
-  const addMessageMutation = trpc.message.addMessage.useMutation();
-  const getMessagesQuery = trpc.message.getMessages.useMutation();
-  const createThreatMutation = trpc.thread.createThread.useMutation();
-  const createAssistantMutation = trpc.assistant.createAssistant.useMutation();
-  const runAssistantMutation = trpc.assistant.runAssistant.useMutation();
-  const uploadFileMutation = trpc.file.uploadFile.useMutation();
+export const ChatProvider: FC<PropsWithChildren<ChatProviderProps>> = ({ assistantId, children }) => {
+    const [threadId, setThreadId] = useState<string | null>(null);
+    const [runId, setRunId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [isReady, setIsReady] = useState(false);
+    const [isFetchingAssistantMessage, setIsFetchingAssistantMessage] = useState(false);
+    const [chatManager, setChatManager] = useState<ChatManager | null>(null);
 
-  const runStatusQuery = trpc.run.getRunStatus.useQuery(
-    {
-      threadId: threadId!,
-      runId: runId!,
-    },
-    {
-      enabled: !!threadId && !!runId,
-    },
-  );
+    const initialMessage = env.NEXT_PUBLIC_ASSISTENT_CONFIG.find((assistant) => assistant.assistantId === assistantId)
+        ?.initialThreadMessage;
 
-  const sendMessage = async (message: string, files: FileType[]) => {
-    setProgress(0);
-    setIsSending(true);
+    useEffect(() => {
+        setChatManager(ChatManager.getInstance(assistantId, setMessages, setIsFetchingAssistantMessage));
+    }, [assistantId, setMessages]);
 
-    setMessages((prevState) => [
-      ...prevState,
-      {
-        role: "user",
-        content: message,
-        fileDetails: files.map((file) => ({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-        })),
-      },
-    ]);
+    useEffect(() => {
+        const handleInitialization = async () => {
+            if (!chatManager) {
+                return;
+            }
 
-    try {
-      if (!threadId || !assistantId) {
-        throw new Error("ThreadId or AssistantId is null");
-      }
+            await chatManager.init(initialMessage ?? "");
 
-      let chatFileIds: string[] = [];
+            setIsReady(chatManager.getReadyState());
+        };
 
-      const hasFiles = files.length > 0;
+        handleInitialization();
+    }, [chatManager]);
 
-      if (hasFiles) {
-        setStatusMessage("Starting upload...");
-
-        const fileIds = await Promise.all(
-          files.map(async (file) => {
-            return uploadFileMutation.mutateAsync({
-              file,
-            });
-          }),
-        );
-
-        if (fileIds.map(String).includes("null")) {
-          throw new Error("One or more file IDs are null");
-        }
-
-        chatFileIds = fileIds;
-
-        setStatusMessage("Upload complete..");
-      }
-
-      console.log("File IDs during Chat:", chatFileIds);
-
-      await addMessageMutation.mutateAsync({
-        threadId,
-        message,
-        fileIds: chatFileIds,
-      });
-
-      console.log("User message submitted. Running assistant...");
-
-      const runId = await runAssistantMutation.mutateAsync({
-        assistantId,
-        threadId,
-      });
-
-      setRunId(runId);
-      console.log("Assistant run successfully. Fetching assistant response...");
-
-      if (!runId) {
-        throw new Error("RunId is null");
-      }
-
-      const response = await getMessagesQuery.mutateAsync({
-        threadId,
-      });
-
-      setMessages((prevState) => [
-        ...prevState,
-        {
-          role: "assistant",
-          content: response,
-        },
-      ]);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error);
-      }
-
-      console.error("Error in sending message:", error);
-    } finally {
-      setProgress(0);
-      setIsSending(false);
-    }
-  };
-
-  return (
-    <ChatContext.Provider
-      value={{
-        messages,
-        sendMessage,
-      }}
-    >
-      {children}
-    </ChatContext.Provider>
-  );
+    return (
+        <ChatContext.Provider
+            value={{
+                messages,
+                isReady,
+                chatManager,
+                isFetchingAssistantMessage,
+            }}
+        >
+            {children}
+        </ChatContext.Provider>
+    );
 };
 
 export const useChat = () => {
-  const chatContext = useContext(ChatContext);
+    const chatContext = useContext(ChatContext);
 
-  if (chatContext === null) {
-    const error = new Error("useChat must be used within a ChatContext");
+    if (chatContext === null) {
+        const error = new Error("useChat must be used within a ChatContext");
 
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(error, useChat);
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(error, useChat);
+        }
+
+        throw error;
     }
 
-    throw error;
-  }
-
-  return chatContext;
+    return chatContext;
 };

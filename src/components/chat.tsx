@@ -6,8 +6,9 @@ import { MessageList } from "./message-list";
 
 export const Chat: FC = () => {
   return (
-    <main className="flex flex-col items-center justify-between bg-space-grey-light pb-40">
+    <main className="h-screen bg-space-grey-light">
       <LinkBar />
+
       <MessageList />
 
       <InputForm />
