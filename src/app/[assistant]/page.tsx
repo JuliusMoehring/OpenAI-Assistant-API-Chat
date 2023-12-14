@@ -11,7 +11,7 @@ import { HydrationGuardProvider } from "@/providers/HydrationProvider";
 import { NextPage } from "next";
 import { useParams } from "next/navigation";
 
-const Root: NextPage = () => {
+const Page: NextPage = () => {
     const { assistant } = useParams<{ assistant: string }>();
 
     useEnforceAuthenticated();
@@ -42,4 +42,4 @@ const Root: NextPage = () => {
     );
 };
 
-export default Root;
+export default Page;

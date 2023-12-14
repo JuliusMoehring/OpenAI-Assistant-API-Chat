@@ -29,8 +29,6 @@ export const assistantRouter = createTRPCRouter({
                 file_ids: fileIds ? fileIds : [],
             };
 
-            console.log("Assistant Options:", assistantOptions);
-
             const assistant = await openai.beta.assistants.create(assistantOptions);
 
             return assistant.id;

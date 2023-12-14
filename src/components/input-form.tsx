@@ -53,11 +53,7 @@ export const InputForm: FC = () => {
 
         const fileArray = Array.from(files);
 
-        fileArray.forEach((file) => {
-            append({
-                file,
-            });
-        });
+        fileArray.forEach((file) => append({ file }));
     };
 
     const onSubmit = async (values: InputFormType) => {
@@ -176,3 +172,5 @@ export const InputForm: FC = () => {
         </div>
     );
 };
+
+export default InputForm;

@@ -6,6 +6,15 @@ import { Dispatch, SetStateAction } from "react";
 import superjson from "superjson";
 import { z } from "zod";
 
+export const FileDataSchema = z.object({
+    name: z.string(),
+    type: z.string(),
+    size: z.number(),
+    content: z.string(),
+});
+
+export type FileDataType = z.infer<typeof FileDataSchema>;
+
 const HandleUploadSchema = z.union([
     z.object({
         success: z.literal(true),
