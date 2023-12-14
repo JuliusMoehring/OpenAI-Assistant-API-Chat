@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { Header } from "@/components/header";
 import { Toaster } from "@/components/ui/toaster";
 import SessionProvider from "@/providers/SessionProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -23,18 +24,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     return (
         <html lang="en" suppressHydrationWarning>
             <body className={inter.className}>
-                <SessionProvider session={session}>
-                    <TrpcProvider>
-                        <main className="h-screen bg-space-grey-light">
-                            <Header />
-                            {children}
-                        </main>
+                <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+                    <SessionProvider session={session}>
+                        <TrpcProvider>
+                            <main className="h-screen">
+                                <Header />
+                                {children}
+                            </main>
 
-                        <Toaster />
+                            <Toaster />
 
-                        <SpeedInsights />
-                    </TrpcProvider>
-                </SessionProvider>
+                            <SpeedInsights />
+                        </TrpcProvider>
+                    </SessionProvider>
+                </ThemeProvider>
             </body>
             <Analytics />
         </html>

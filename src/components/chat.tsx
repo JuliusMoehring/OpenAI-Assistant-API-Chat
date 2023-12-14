@@ -6,7 +6,7 @@ import { useChat } from "@/providers/ChatProvider";
 import { InitializeChat } from "./initialize-chat";
 
 import dynamic from "next/dynamic";
-import { MessageList } from "./message-list";
+import { Feed } from "./feed";
 
 const InputForm = dynamic(() => import("./input-form"), {
     ssr: false,
@@ -21,7 +21,7 @@ export const Chat: FC = () => {
 
     return (
         <>
-            <MessageList />
+            <Feed />
 
             <InputForm />
         </>

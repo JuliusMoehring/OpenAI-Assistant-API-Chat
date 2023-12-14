@@ -101,7 +101,7 @@ export const InputForm: FC = () => {
     const canInput = isReady && !isFetchingAssistantMessage;
 
     return (
-        <div className="fixed bottom-0 flex w-full flex-col items-center space-y-3 bg-gradient-to-b from-transparent via-gray-100 to-gray-100 p-5 pb-3 sm:px-0">
+        <div className="via-bg-background to-bg-backgound fixed bottom-0 flex w-full flex-col items-center space-y-3 bg-gradient-to-b from-transparent p-5 pb-3 sm:px-0">
             <div className="flex w-full max-w-screen-md flex-col items-stretch">
                 <div className="mb-4 flex w-full max-w-screen-md flex-col gap-1">
                     {fields.map(({ id, file }, index) => (
@@ -112,15 +112,11 @@ export const InputForm: FC = () => {
                 <Form {...form}>
                     <form
                         onSubmit={form.handleSubmit(onSubmit)}
-                        className="flex w-full items-end gap-4 rounded-xl border border-gray-200 bg-white p-4"
+                        className="flex w-full items-end gap-4 rounded-xl border border-muted bg-muted p-4"
                     >
                         <label
                             htmlFor="file-upload"
-                            className={cn(
-                                buttonVariants({ size: "icon" }),
-                                "shrink-0",
-                                isReady ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-200",
-                            )}
+                            className={cn(buttonVariants({ size: "icon", variant: "outline" }), "shrink-0")}
                         >
                             <input
                                 type="file"
@@ -142,7 +138,7 @@ export const InputForm: FC = () => {
                                     <FormControl>
                                         <Textarea
                                             placeholder="Send a message"
-                                            className="w-full resize-none focus:outline-none"
+                                            className="w-full resize-none bg-transparent pt-2 focus:outline-none"
                                             tabIndex={0}
                                             rows={1}
                                             autoFocus
@@ -156,14 +152,7 @@ export const InputForm: FC = () => {
                             )}
                         />
 
-                        <Button
-                            size="icon"
-                            className={cn(
-                                "shrink-0 justify-center",
-                                isReady ? "bg-green-500 hover:bg-green-600" : "bg-gray-200",
-                            )}
-                            disabled={!canInput}
-                        >
+                        <Button size="icon" className="shrink-0 justify-center" disabled={!canInput}>
                             {isFetchingAssistantMessage ? <LoadingCircle /> : <SendHorizonalIcon className="h-4 w-4" />}
                         </Button>
                     </form>
